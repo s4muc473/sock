@@ -1,0 +1,155 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    margin: 0;
+}
+
+h1 {
+    color: #333;
+}
+
+#game-modes {
+    margin-bottom: 20px;
+}
+
+#game-modes button {
+    padding: 10px 15px;
+    margin: 0 5px;
+    font-size: 1em;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#game-modes button:hover {
+    background-color: #0056b3;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 2px solid #555;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 50px);
+    grid-template-rows: repeat(8, 50px);
+    border: 1px solid #ccc;
+}
+
+.cell {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #e0e0e0;
+    transition: background-color 0.2s ease-in-out;
+    user-select: none; /* Evita seleção de texto */
+}
+
+.cell:hover {
+    background-color: #d0d0d0;
+}
+
+.cell.active {
+    background-color: #aaffaa; /* Cor para células com pontos (do jogador) */
+    color: #333;
+}
+
+.cell.base {
+    background-color: #4CAF50; /* Cor para a célula base do jogador */
+    color: white;
+}
+
+.cell.ai-cell {
+    background-color: #ADD8E6; /* Um azul claro para as células da IA */
+    color: #333;
+}
+
+.cell.player2-cell {
+    background-color: #ffd700; /* Um amarelo dourado para as células do Jogador 2 */
+    color: #333;
+}
+
+.cell.player2-base {
+    background-color: #DAA520; /* Um dourado mais forte para a base do Jogador 2 */
+    color: white;
+}
+
+/* ... (o resto do seu CSS existente abaixo) ... */
+
+.cell.ai-base {
+    background-color: #007BFF; /* Um azul mais forte para a base da IA */
+    color: white;
+}
+
+/* Nova cor para a segunda IA (se existir) */
+.cell.ai2-cell {
+    background-color: #FFB3BA; /* Um rosa claro para a segunda IA */
+    color: #333;
+}
+
+.cell.ai2-base {
+    background-color: #FF69B4; /* Um rosa mais forte para a base da segunda IA */
+    color: white;
+}
+
+
+#message-box {
+    margin-top: 20px;
+    font-size: 1.1em;
+    color: #666;
+    padding: 10px;
+    border: 1px dashed #ccc;
+    background-color: #f9f9f9;
+    width: 80%;
+    text-align: center;
+}
+
+/* ... (seu CSS existente acima) ... */
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 50px);
+    grid-template-rows: repeat(8, 50px);
+    border: 1px solid #ccc;
+    background-color: #f0f0f0; /* Cor padrão do tabuleiro */
+    transition: background-color 0.5s ease-in-out; /* Transição suave para a mudança de cor */
+}
+
+/* Cores de fundo do tabuleiro para cada jogador/IA */
+.board-player-turn {
+    background-color: rgba(170, 255, 170, 0.3); /* Verde claro com 30% de opacidade */
+}
+
+.board-player2-turn {
+    background-color: rgba(255, 215, 0, 0.3); /* Amarelo dourado com 30% de opacidade */
+}
+
+.board-ai-turn {
+    background-color: rgba(173, 216, 230, 0.3); /* Azul claro com 30% de opacidade */
+}
+
+.board-ai2-turn {
+    background-color: rgba(255, 179, 186, 0.3); /* Rosa claro com 30% de opacidade */
+}
+
+/* ... (o resto do seu CSS existente abaixo) ... */
