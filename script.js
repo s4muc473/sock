@@ -67,10 +67,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.updateMessage('Modo: Jogador vs. Jogador. Jogador 1: clique para iniciar sua base.');
             } else if (mode === 'pvai-ai') {
                 this.playersInGame = ["player", "ai", "ai2"];
-                this.updateMessage('Modo: Jogador vs. IA + IA. Jogador 1: clique para iniciar sua base.');
+                this.updateMessage('Modo: Jogador vs IA vs IA. Jogador 1: clique para iniciar sua base.');
             }
             this.elements.board.style.pointerEvents = 'auto'; // Habilita cliques no tabuleiro
             this.setBoardBackground('none'); // Limpa a cor de fundo enquanto as bases são estabelecidas
+        },
+
+        // ---------------------------------------------------------------------------------------------
+        countTerritory(playerType) {
+            let count = 0;
+            for (let r = 0; r < this.boardSize; r++) {
+                for (let c = 0; c < this.boardSize; c++) {
+                    if (this.ownerGrid[r][c] === playerType) {
+                        count++;
+                    }
+                }
+            }
+            return count;
         },
 
         /**
@@ -136,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (owner === 'player') {
                         cell.classList.add('active');
                         if (this.playerBase && this.playerBase.row === row && this.playerBase.col === col) {
-                             cell.classList.add('base');
+                            cell.classList.add('base');
                         }
                     } else if (owner === 'player2') {
                         cell.classList.add('player2-cell');
@@ -192,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Escolhe aleatoriamente quem começa entre os jogadores ativos
             this.currentPlayer = this.playersInGame[Math.floor(Math.random() * this.playersInGame.length)];
-            this.updateMessage(`Bases estabelecidas! É a vez de ${this.getPlayerDisplayName(this.currentPlayer)}.`);
+            this.updateMessage(`Bases estabelecidas! Três jogadores competindo. É a vez de ${this.getPlayerDisplayName(this.currentPlayer)}.`);
             this.gameStarted = true;
             this.setBoardBackground(this.currentPlayer); // Define a cor de fundo para o primeiro jogador
 
@@ -211,8 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
             switch (playerType) {
                 case 'player': return 'Jogador 1';
                 case 'player2': return 'Jogador 2';
-                case 'ai': return 'IA 1';
-                case 'ai2': return 'IA 2';
+                case 'ai': return 'IA Vermelha';
+                case 'ai2': return 'IA Azul';
                 default: return 'Desconhecido';
             }
         },
@@ -264,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (entityType === 'ai2') {
                 this.ai2Base = { row: row, col: col };
             } else if (entityType === 'player2') { // Caso raro se player 2 fosse gerado por AI
-                 this.player2Base = { row: row, col: col };
+                this.player2Base = { row: row, col: col };
             }
 
 
@@ -342,8 +355,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Verifica distância mínima para player 2
                         const dist = this.getManhattanDistance(this.playerBase.row, this.playerBase.col, row, col);
                         if (dist < 4) { // DISTÂNCIA MÍNIMA DE 4 BLOCOS TAMBÉM PARA PvP
-                             this.updateMessage('Sua base deve estar a pelo menos 4 blocos da base do Jogador 1. Escolha outro lugar.');
-                             return;
+                            this.updateMessage('Sua base deve estar a pelo menos 4 blocos da base do Jogador 1. Escolha outro lugar.');
+                            return;
                         }
 
                         this.grid[row][col] = 1;
@@ -499,70 +512,115 @@ document.addEventListener('DOMContentLoaded', () => {
             const aiPlayerType = this.currentPlayer;
             this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} está pensando...`);
 
-            let cellsOwnedByAI = [];
-            let emptyCells = [];
+            // Encontrar células da IA atual
+            let aiCells = [];
+            // Encontrar células de todos os oponentes (incluindo outras IAs)
+            let enemyCells = [];
 
             for (let r = 0; r < this.boardSize; r++) {
                 for (let c = 0; c < this.boardSize; c++) {
                     const points = this.grid[r][c];
                     const owner = this.ownerGrid[r][c];
 
-                    if (owner === aiPlayerType) {
-                        if (points > 0) {
-                            cellsOwnedByAI.push({ row: r, col: c, points: points });
-                        }
-                    } else if (owner === 'none') {
+                    if (owner === aiPlayerType && points > 0) {
+                        aiCells.push({ row: r, col: c, points: points });
+                    } else if (owner !== 'none' && owner !== aiPlayerType && points > 0) {
+                        enemyCells.push({ row: r, col: c, owner: owner, points: points });
+                    }
+                }
+            }
+
+            // Prioridade 1: Multiplicar células próprias com 3 pontos
+            const potentialMultipliers = aiCells.filter(cell => cell.points === 3);
+            if (potentialMultipliers.length > 0) {
+                const aiMove = potentialMultipliers[Math.floor(Math.random() * potentialMultipliers.length)];
+                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} está multiplicando em (${aiMove.row},${aiMove.col}).`);
+                this.playTurn(aiMove.row, aiMove.col, aiPlayerType);
+                return;
+            }
+
+            // Prioridade 2: Atacar células inimigas vulneráveis (com 3 pontos)
+            const vulnerableEnemies = enemyCells.filter(cell => cell.points === 3);
+            if (vulnerableEnemies.length > 0) {
+                // Escolher aleatoriamente qual inimigo atacar
+                const target = vulnerableEnemies[Math.floor(Math.random() * vulnerableEnemies.length)];
+
+                // Encontrar células próprias adjacentes ao alvo
+                const adjacentCells = this.getAdjacentCells(target.row, target.col);
+                const adjacentAiCells = adjacentCells.filter(cell =>
+                    this.ownerGrid[cell.row][cell.col] === aiPlayerType &&
+                    this.grid[cell.row][cell.col] > 0
+                );
+
+                if (adjacentAiCells.length > 0) {
+                    // Atacar a partir de uma célula adjacente própria
+                    const attackFrom = adjacentAiCells[0];
+                    this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} está atacando ${this.getPlayerDisplayName(target.owner)} em (${target.row},${target.col}).`);
+                    this.playTurn(attackFrom.row, attackFrom.col, aiPlayerType);
+                    return;
+                }
+            }
+
+            // Prioridade 3: Expandir células próprias existentes
+            if (aiCells.length > 0) {
+                // Ordenar por pontos (mais pontos primeiro)
+                aiCells.sort((a, b) => b.points - a.points);
+                const aiMove = aiCells[0];
+                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} está expandindo em (${aiMove.row},${aiMove.col}).`);
+                this.playTurn(aiMove.row, aiMove.col, aiPlayerType);
+                return;
+            }
+
+            // Prioridade 4: Iniciar nova célula em posição estratégica
+            const emptyCells = [];
+            for (let r = 0; r < this.boardSize; r++) {
+                for (let c = 0; c < this.boardSize; c++) {
+                    if (this.ownerGrid[r][c] === 'none') {
                         emptyCells.push({ row: r, col: c });
                     }
                 }
             }
 
-            let aiMove = null;
-
-            // Prioridade 1: Multiplicar uma célula (que tenha 3 pontos) da IA
-            const potentialMultipliers = cellsOwnedByAI.filter(cell => cell.points === 3);
-            if (potentialMultipliers.length > 0) {
-                aiMove = potentialMultipliers[Math.floor(Math.random() * potentialMultipliers.length)];
-                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} clicou em (${aiMove.row},${aiMove.col}) para multiplicar.`);
-                this.playTurn(aiMove.row, aiMove.col, aiPlayerType);
-                return;
-            }
-
-            // Prioridade 2: Expandir uma célula existente (com 1 ou 2 pontos) da IA
-            if (cellsOwnedByAI.length > 0) {
-                cellsOwnedByAI.sort((a, b) => b.points - a.points);
-                aiMove = cellsOwnedByAI[0];
-                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} clicou em (${aiMove.row},${aiMove.col}) para expandir.`);
-                this.playTurn(aiMove.row, aiMove.col, aiPlayerType);
-                return;
-            }
-
-            // Prioridade 3: Se não há células para expandir, a IA tenta iniciar uma nova em um espaço vazio estratégico
-            let strategicEmptyCells = emptyCells.filter(cell => {
-                return this.directions.some(dir => {
-                    const adjRow = cell.row + dir[0];
-                    const adjCol = cell.col + dir[1];
-                    return adjRow >= 0 && adjRow < this.boardSize && adjCol >= 0 && adjCol < this.boardSize && this.ownerGrid[adjRow][adjCol] !== 'none';
+            if (emptyCells.length > 0) {
+                // Preferir células próximas a inimigos (para criar conflito entre IAs)
+                const strategicCells = emptyCells.filter(cell => {
+                    return this.directions.some(dir => {
+                        const adjRow = cell.row + dir[0];
+                        const adjCol = cell.col + dir[1];
+                        return adjRow >= 0 && adjRow < this.boardSize &&
+                            adjCol >= 0 && adjCol < this.boardSize &&
+                            this.ownerGrid[adjRow][adjCol] !== 'none' &&
+                            this.ownerGrid[adjRow][adjCol] !== aiPlayerType;
+                    });
                 });
-            });
 
-            if (strategicEmptyCells.length > 0) {
-                aiMove = strategicEmptyCells[Math.floor(Math.random() * strategicEmptyCells.length)];
-                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} iniciou um novo foco em (${aiMove.row},${aiMove.col}).`);
+                const targetCells = strategicCells.length > 0 ? strategicCells : emptyCells;
+                const aiMove = targetCells[Math.floor(Math.random() * targetCells.length)];
+
                 this.grid[aiMove.row][aiMove.col] = 1;
                 this.ownerGrid[aiMove.row][aiMove.col] = aiPlayerType;
                 this.updateCellDisplay(aiMove.row, aiMove.col);
-                this.nextTurn();
-                return;
-            } else if (emptyCells.length > 0) { // Se não houver espaços estratégicos, escolhe qualquer vazio
-                aiMove = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} iniciou um novo foco em (${aiMove.row},${aiMove.col}).`);
-                this.grid[aiMove.row][aiMove.col] = 1;
-                this.ownerGrid[aiMove.row][aiMove.col] = aiPlayerType;
-                this.updateCellDisplay(aiMove.row, aiMove.col);
+                this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} iniciou nova célula em (${aiMove.row},${aiMove.col}).`);
                 this.nextTurn();
                 return;
             }
+
+            // Se não houver jogadas possíveis
+            this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} não encontrou movimentos válidos. Passando o turno.`);
+            this.nextTurn();
+        },
+
+        // Adicionar esta nova função auxiliar
+        getAdjacentCells(row, col) {
+            const cells = [];
+            this.directions.forEach(dir => {
+                const newRow = row + dir[0];
+                const newCol = col + dir[1];
+                if (newRow >= 0 && newRow < this.boardSize && newCol >= 0 && newCol < this.boardSize) {
+                    cells.push({ row: newRow, col: newCol });
+                }
+            });
+            return cells;
 
             // Se não há jogadas possíveis, a IA simplesmente passa o turno
             this.updateMessage(`${this.getPlayerDisplayName(aiPlayerType)} não encontrou movimentos válidos. Passando o turno.`);
@@ -576,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-css:document.addEventListener('DOMContentLoaded', () => {
+css: document.addEventListener('DOMContentLoaded', () => {
     // Objeto principal do jogo para encapsular toda a lógica
     const Game = {
         boardSize: 8,
@@ -714,7 +772,7 @@ css:document.addEventListener('DOMContentLoaded', () => {
                     if (owner === 'player') {
                         cell.classList.add('active');
                         if (this.playerBase && this.playerBase.row === row && this.playerBase.col === col) {
-                             cell.classList.add('base');
+                            cell.classList.add('base');
                         }
                     } else if (owner === 'player2') {
                         cell.classList.add('player2-cell');
@@ -842,7 +900,7 @@ css:document.addEventListener('DOMContentLoaded', () => {
             } else if (entityType === 'ai2') {
                 this.ai2Base = { row: row, col: col };
             } else if (entityType === 'player2') { // Caso raro se player 2 fosse gerado por AI
-                 this.player2Base = { row: row, col: col };
+                this.player2Base = { row: row, col: col };
             }
 
 
@@ -920,8 +978,8 @@ css:document.addEventListener('DOMContentLoaded', () => {
                         // Verifica distância mínima para player 2
                         const dist = this.getManhattanDistance(this.playerBase.row, this.playerBase.col, row, col);
                         if (dist < 4) { // DISTÂNCIA MÍNIMA DE 4 BLOCOS TAMBÉM PARA PvP
-                             this.updateMessage('Sua base deve estar a pelo menos 4 blocos da base do Jogador 1. Escolha outro lugar.');
-                             return;
+                            this.updateMessage('Sua base deve estar a pelo menos 4 blocos da base do Jogador 1. Escolha outro lugar.');
+                            return;
                         }
 
                         this.grid[row][col] = 1;
