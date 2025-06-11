@@ -74,6 +74,50 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         // ---------------------------------------------------------------------------------------------
+
+        updatePlayersStatus() {
+            const statusContainer = document.getElementById('players-status');
+            if (!statusContainer) return;
+
+            statusContainer.innerHTML = '';
+
+            this.playersInGame.forEach(player => {
+                const isDefeated = this.isPlayerDefeated(player);
+                const playerStatus = document.createElement('div');
+                playerStatus.className = `player-status ${player} ${isDefeated ? 'defeated' : 'active'}`;
+                playerStatus.textContent = `${this.getPlayerDisplayName(player)}: ${isDefeated ? 'Eliminado' : 'Ativo'}`;
+                statusContainer.appendChild(playerStatus);
+            });
+        },
+
+        endGame(winner) {
+            this.gameStarted = false;
+            this.elements.board.classList.add('game-over');
+
+            if (winner) {
+                if (winner === 'player') {
+                    this.updateMessage('🎉 Parabéns! Você venceu o jogo! 🎉');
+                } else {
+                    this.updateMessage(`🏆 ${this.getPlayerDisplayName(winner)} venceu o jogo!`);
+                }
+            } else {
+                this.updateMessage('O jogo terminou sem vencedores!');
+            }
+
+            // Mostra botão para reiniciar
+            const restartBtn = document.createElement('button');
+            restartBtn.textContent = 'Jogar Novamente';
+            restartBtn.classList.add('restart-btn');
+            restartBtn.addEventListener('click', () => {
+                this.resetGame();
+                this.elements.gameModesContainer.style.display = 'flex';
+                this.elements.messageBox.innerHTML = 'Escolha um modo de jogo para começar.';
+            });
+
+            this.elements.messageBox.appendChild(restartBtn);
+            this.updatePlayersStatus();
+        },
+
         countTerritory(playerType) {
             let count = 0;
             for (let r = 0; r < this.boardSize; r++) {
@@ -84,6 +128,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             return count;
+        },
+
+
+        isPlayerDefeated(playerType) {
+            for (let r = 0; r < this.boardSize; r++) {
+                for (let c = 0; c < this.boardSize; c++) {
+                    if (this.ownerGrid[r][c] === playerType && this.grid[r][c] > 0) {
+                        return false; // Ainda tem células
+                    }
+                }
+            }
+            return true; // Não tem mais células
         },
 
         /**
@@ -292,12 +348,39 @@ document.addEventListener('DOMContentLoaded', () => {
          * Troca o turno para o próximo jogador na sequência e atualiza a cor do tabuleiro.
          */
         nextTurn() {
-            let currentIndex = this.playersInGame.indexOf(this.currentPlayer);
-            let nextIndex = (currentIndex + 1) % this.playersInGame.length;
-            this.currentPlayer = this.playersInGame[nextIndex];
+            // Verifica jogadores ativos (que ainda têm células)
+            const activePlayers = this.playersInGame.filter(player =>
+                !this.isPlayerDefeated(player)
+            );
+
+            // Se só restar um jogador, ele é o vencedor
+            if (activePlayers.length === 1) {
+                this.endGame(activePlayers[0]);
+                return;
+            }
+
+            // Encontra o próximo jogador ATIVO na sequência
+            let nextIndex = this.playersInGame.indexOf(this.currentPlayer);
+            let attempts = 0;
+            const maxAttempts = this.playersInGame.length;
+
+            do {
+                nextIndex = (nextIndex + 1) % this.playersInGame.length;
+                this.currentPlayer = this.playersInGame[nextIndex];
+                attempts++;
+            } while (this.isPlayerDefeated(this.currentPlayer) && attempts < maxAttempts);
+
+            // Se não encontrou nenhum jogador ativo (só por segurança)
+            if (attempts >= maxAttempts) {
+                this.endGame(null); // Empate técnico
+                return;
+            }
 
             this.updateMessage(`É a vez de ${this.getPlayerDisplayName(this.currentPlayer)}.`);
-            this.setBoardBackground(this.currentPlayer); // Define a cor de fundo para o próximo jogador
+            this.setBoardBackground(this.currentPlayer);
+
+            // Atualiza display de status dos jogadores
+            this.updatePlayersStatus();
 
             if (this.currentPlayer.startsWith("ai")) {
                 setTimeout(() => this.aiTurn(), 1000);
@@ -332,66 +415,34 @@ document.addEventListener('DOMContentLoaded', () => {
          * @param {Event} event - O objeto do evento de clique.
          */
         handleCellClick(event) {
+            // Se o jogo acabou, não faz nada
+            if (!this.gameStarted || this.elements.board.classList.contains('game-over')) {
+                return;
+            }
+
+            // Se for turno da IA, não permite clique
+            if (this.currentPlayer.startsWith("ai")) {
+                this.updateMessage("Aguarde sua vez!");
+                return;
+            }
+
             const row = parseInt(event.target.dataset.row);
             const col = parseInt(event.target.dataset.col);
 
-            if (!this.gameStarted) {
-                // FASE DE ESTABELECIMENTO DE BASES
-                if (this.currentMode === 'pvp') {
-                    if (this.basesEstablishedCount === 0) { // Jogador 1 estabelece base
-                        this.grid[row][col] = 1;
-                        this.ownerGrid[row][col] = 'player';
-                        this.playerBase = { row, col };
-                        event.target.classList.add('base');
-                        this.updateCellDisplay(row, col);
-                        this.basesEstablishedCount++;
-                        this.updateMessage('Jogador 2: clique para iniciar sua base.');
-                        return; // Não inicia a sequência de turnos ainda
-                    } else if (this.basesEstablishedCount === 1) { // Jogador 2 estabelece base
-                        if (this.ownerGrid[row][col] !== 'none') { // Não pode iniciar em cima do player 1
-                            this.updateMessage('Escolha um quadrado vazio para sua base, Jogador 2.');
-                            return;
-                        }
-                        // Verifica distância mínima para player 2
-                        const dist = this.getManhattanDistance(this.playerBase.row, this.playerBase.col, row, col);
-                        if (dist < 4) { // DISTÂNCIA MÍNIMA DE 4 BLOCOS TAMBÉM PARA PvP
-                            this.updateMessage('Sua base deve estar a pelo menos 4 blocos da base do Jogador 1. Escolha outro lugar.');
-                            return;
-                        }
+            // Verifica se o jogador atual está eliminado
+            if (this.isPlayerDefeated(this.currentPlayer)) {
+                this.updateMessage(`Você foi eliminado! Aguarde o fim do jogo.`);
+                this.nextTurn(); // Passa automaticamente o turno
+                return;
+            }
 
-                        this.grid[row][col] = 1;
-                        this.ownerGrid[row][col] = 'player2';
-                        this.player2Base = { row, col };
-                        event.target.classList.add('player2-base'); // Adiciona classe visual para Player 2
-                        this.updateCellDisplay(row, col);
-                        this.basesEstablishedCount++;
-                        this.startTurnsSequence(); // Agora sim, inicia a sequência de turnos
-                        return;
-                    }
-                } else { // Modos PvAI e PvAIAI: Jogador 1 estabelece base
-                    this.grid[row][col] = 1;
-                    this.ownerGrid[row][col] = 'player';
-                    this.playerBase = { row, col };
-                    event.target.classList.add('base');
-                    this.updateCellDisplay(row, col);
-                    this.startTurnsSequence(); // Inicia a sequência de turnos
-                    return;
-                }
+            // Restante da lógica original...
+            if (this.grid[row][col] > 0 && this.ownerGrid[row][col] === this.currentPlayer) {
+                this.playTurn(row, col, this.currentPlayer);
+            } else if (this.ownerGrid[row][col] !== this.currentPlayer && this.ownerGrid[row][col] !== 'none') {
+                this.updateMessage(`Essa célula pertence a ${this.getPlayerDisplayName(this.ownerGrid[row][col])}!`);
             } else {
-                // JOGO EM ANDAMENTO
-                if (this.currentPlayer.startsWith("ai")) { // Não permite clique se for turno da IA
-                    this.updateMessage("Não é sua vez! Espere a IA jogar.");
-                    return;
-                }
-
-                // Verifica se o clique é na própria célula do jogador atual
-                if (this.grid[row][col] > 0 && this.ownerGrid[row][col] === this.currentPlayer) {
-                    this.playTurn(row, col, this.currentPlayer);
-                } else if (this.ownerGrid[row][col] !== this.currentPlayer && this.ownerGrid[row][col] !== 'none') {
-                    this.updateMessage(`Essa célula pertence a ${this.getPlayerDisplayName(this.ownerGrid[row][col])}!`);
-                } else {
-                    this.updateMessage(`Você só pode interagir com suas células ativas, ${this.getPlayerDisplayName(this.currentPlayer)}.`);
-                }
+                this.updateMessage(`Você só pode interagir com suas células ativas.`);
             }
         },
 
@@ -434,10 +485,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Processa a fila
             const processNextMultiplication = () => {
+                // if (multiplicationQueue.length === 0) {
+                //     // Todas as multiplicações em cadeia foram processadas
+                //     this.updateMessage(`${this.getPlayerDisplayName(playerType)} completou a explosão em cadeia, afetando ${totalAffectedCells} células.`);
+                //     this.nextTurn(); // Somente passa o turno após todas as explosões terminarem
+                //     return;
+                // }
+
                 if (multiplicationQueue.length === 0) {
-                    // Todas as multiplicações em cadeia foram processadas
-                    this.updateMessage(`${this.getPlayerDisplayName(playerType)} completou a explosão em cadeia, afetando ${totalAffectedCells} células.`);
-                    this.nextTurn(); // Somente passa o turno após todas as explosões terminarem
+                    this.updateMessage(`${this.getPlayerDisplayName(playerType)} completou a explosão em cadeia.`);
+
+                    // Verifica se alguém foi eliminado após a explosão
+                    const activePlayers = this.playersInGame.filter(player =>
+                        !this.isPlayerDefeated(player)
+                    );
+
+                    if (activePlayers.length === 1) {
+                        this.endGame(activePlayers[0]);
+                        return;
+                    }
+
+                    this.nextTurn();
                     return;
                 }
 
@@ -493,6 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 });
+
+
 
                 // Pequeno atraso para visualizar cada "explosão" na cadeia
                 setTimeout(processNextMultiplication, 200); // Ajuste este valor para controlar a velocidade da cadeia
