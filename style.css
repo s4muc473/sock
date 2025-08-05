@@ -1,174 +1,281 @@
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
+    font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5;
     margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
 }
 
 h1 {
     color: #333;
-}
-
-#game-modes {
     margin-bottom: 20px;
 }
 
-#game-modes button {
+.game-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.game-modes button {
     padding: 10px 15px;
-    margin: 0 5px;
-    font-size: 1em;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
     border: none;
     border-radius: 5px;
-    transition: background-color 0.2s ease-in-out;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
 }
 
-#game-modes button:hover {
-    background-color: #0056b3;
+.game-modes button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-#game-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 2px solid #555;
-    padding: 20px;
-    background-color: #fff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+#mode-pvai {
+    background-color: #4CAF50;
+    color: white;
 }
 
-#board {
+#mode-pvp {
+    background-color: #2196F3;
+    color: white;
+}
+
+#mode-pvai-ai {
+    background-color: #FF9800;
+    color: white;
+}
+
+#mode-pv5ai {
+    background-color: #9C27B0;
+    color: white;
+}
+
+.board {
     display: grid;
-    grid-template-columns: repeat(8, 50px);
-    grid-template-rows: repeat(8, 50px);
-    border: 1px solid #ccc;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 2px;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    background-color: #ddd;
+    border: 2px solid #333;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.board.board-player-turn {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.board.board-player2-turn {
+    background-color: rgba(33, 150, 243, 0.1);
+}
+
+.board.board-ai1-turn {
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.board.board-ai2-turn {
+    background-color: rgba(77, 150, 255, 0.1);
+}
+
+.board.board-ai3-turn {
+    background-color: rgba(107, 255, 107, 0.1);
+}
+
+.board.board-ai4-turn {
+    background-color: rgba(255, 255, 77, 0.1);
+}
+
+.board.board-ai5-turn {
+    background-color: rgba(217, 107, 255, 0.1);
 }
 
 .cell {
-    width: 50px;
-    height: 50px;
-    border: 1px solid #eee;
+    aspect-ratio: 1;
     display: flex;
-    align-items: center;
     justify-content: center;
-    font-size: 1.2em;
+    align-items: center;
+    background-color: #f0f0f0;
     font-weight: bold;
     cursor: pointer;
-    background-color: #e0e0e0;
-    transition: background-color 0.2s ease-in-out;
-    user-select: none; /* Evita seleção de texto */
+    transition: all 0.2s;
+    position: relative;
 }
 
 .cell:hover {
-    background-color: #d0d0d0;
+    transform: scale(1.05);
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.cell.active {
-    background-color: #aaffaa; /* Cor para células com pontos (do jogador) */
-    color: #333;
-}
-
-.cell.base {
-    background-color: #4CAF50; /* Cor para a célula base do jogador */
+.active {
+    background-color: #4CAF50;
     color: white;
 }
 
-.cell.ai-cell {
-    background-color: #ADD8E6; /* Um azul claro para as células da IA */
-    color: #333;
-}
-
-.cell.player2-cell {
-    background-color: #ffd700; /* Um amarelo dourado para as células do Jogador 2 */
-    color: #333;
-}
-
-.cell.player2-base {
-    background-color: #DAA520; /* Um dourado mais forte para a base do Jogador 2 */
+.player2-cell {
+    background-color: #2196F3;
     color: white;
 }
 
-/* ... (o resto do seu CSS existente abaixo) ... */
-
-.cell.ai-base {
-    background-color: #007BFF; /* Um azul mais forte para a base da IA */
+.ai1-cell {
+    background-color: #ff6b6b;
     color: white;
 }
 
-/* Nova cor para a segunda IA (se existir) */
-.cell.ai2-cell {
-    background-color: #FFB3BA; /* Um rosa claro para a segunda IA */
+.ai2-cell {
+    background-color: #4d96ff;
+    color: white;
+}
+
+.ai3-cell {
+    background-color: #6bff6b;
     color: #333;
 }
 
-.cell.ai2-base {
-    background-color: #FF69B4; /* Um rosa mais forte para a base da segunda IA */
+.ai4-cell {
+    background-color: #ffff4d;
+    color: #333;
+}
+
+.ai5-cell {
+    background-color: #d96bff;
     color: white;
 }
 
+.base, .player2-base, .ai1-base, .ai2-base, .ai3-base, .ai4-base, .ai5-base {
+    border: 3px solid;
+    box-sizing: border-box;
+}
 
-#message-box {
-    margin-top: 20px;
+.base {
+    border-color: #2E7D32;
+}
+
+.player2-base {
+    border-color: #0D47A1;
+}
+
+.ai1-base {
+    border-color: #ff0000;
+}
+
+.ai2-base {
+    border-color: #0044ff;
+}
+
+.ai3-base {
+    border-color: #00aa00;
+}
+
+.ai4-base {
+    border-color: #ffcc00;
+}
+
+.ai5-base {
+    border-color: #9900ff;
+}
+
+.message-box {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.1em;
-    color: #666;
-    padding: 10px;
-    border: 1px dashed #ccc;
-    background-color: #f9f9f9;
-    width: 80%;
-    text-align: center;
 }
 
-/* ... (seu CSS existente acima) ... */
-
-#board {
-    display: grid;
-    grid-template-columns: repeat(8, 50px);
-    grid-template-rows: repeat(8, 50px);
-    border: 1px solid #ccc;
-    background-color: #f0f0f0; /* Cor padrão do tabuleiro */
-    transition: background-color 0.5s ease-in-out; /* Transição suave para a mudança de cor */
+.players-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
 }
 
-/* Cores de fundo do tabuleiro para cada jogador/IA */
-.board-player-turn {
-    background-color: rgba(170, 255, 170, 0.3); /* Verde claro com 30% de opacidade */
+.player-status {
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-weight: bold;
 }
 
-.board-player2-turn {
-    background-color: rgba(255, 215, 0, 0.3); /* Amarelo dourado com 30% de opacidade */
+.player-status.player {
+    background-color: #4CAF50;
+    color: white;
 }
 
-.board-ai-turn {
-    background-color: rgba(173, 216, 230, 0.3); /* Azul claro com 30% de opacidade */
+.player-status.player2 {
+    background-color: #2196F3;
+    color: white;
 }
 
-.board-ai2-turn {
-    background-color: rgba(255, 179, 186, 0.3); /* Rosa claro com 30% de opacidade */
+.player-status.ai1 {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.player-status.ai2 {
+    background-color: #4d96ff;
+    color: white;
+}
+
+.player-status.ai3 {
+    background-color: #6bff6b;
+    color: #333;
+}
+
+.player-status.ai4 {
+    background-color: #ffff4d;
+    color: #333;
+}
+
+.player-status.ai5 {
+    background-color: #d96bff;
+    color: white;
+}
+
+.player-status.defeated {
+    opacity: 0.6;
+    text-decoration: line-through;
 }
 
 .restart-btn {
     margin-top: 10px;
     padding: 8px 16px;
-    background-color: #4CAF50;
+    background-color: #333;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 16px;
+    font-weight: bold;
 }
 
 .restart-btn:hover {
-    background-color: #45a049;
+    background-color: #555;
 }
 
-.game-over {
-    opacity: 0.8;
+.board.game-over {
+    opacity: 0.7;
+    pointer-events: none;
 }
-
-
