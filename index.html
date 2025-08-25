@@ -1,25 +1,950 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expansão Celular</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Simulador de Usina Solar - Sistema Avançado</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e;
+            overflow: hidden;
+            color: #fff;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #game-canvas {
+            background: linear-gradient(to bottom, #4e54c8, #8f94fb);
+            display: block;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(26, 26, 46, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            min-width: 250px;
+            max-width: 300px;
+        }
+        
+        #build-menu {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(26, 26, 46, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            gap: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 80%;
+        }
+        
+        .build-button {
+            padding: 12px 20px;
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .build-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(to bottom, #2980b9, #3498db);
+        }
+        
+        .build-button.selected {
+            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
+        }
+        
+        #resources {
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .resource-bar {
+            height: 15px;
+            background-color: #2c3e50;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(to right, #f1c40f, #f39c12);
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(to right, #9b59b6, #8e44ad);
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        #actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(26, 26, 46, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .action-button {
+            padding: 10px 15px;
+            background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .action-button:hover {
+            background: linear-gradient(to bottom, #8e44ad, #9b59b6);
+        }
+        
+        #tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            font-size: 14px;
+            max-width: 250px;
+        }
+        
+        .save-notification {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(46, 204, 113, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .maintenance-cost {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <h1>Expansão Celular</h1>
-
-    <div id="game-modes">
-        <button id="mode-pvai">Jogador vs. IA</button>
-        <button id="mode-pvp">Jogador vs. Jogador</button>
-        <button id="mode-pvai-ai">Player vs IA vs IA</button>
-        <button id="mode-pv5ai">1 Jogador vs 5 IAs</button>
-    </div>
-
     <div id="game-container">
-        <div id="board"></div>
-        <div id="message-box">Escolha um modo de jogo para começar.</div>
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <h2>Usina Solar</h2>
+            <div id="resources">
+                <div>💰 Dinheiro: $<span id="money">10000</span></div>
+                <div>⚡ Energia: <span id="energy">0</span> / <span id="max-energy">0</span> MW</div>
+                <div class="resource-bar"><div class="energy-fill" id="energy-bar"></div></div>
+                <div>🔋 Bateria: <span id="stored-energy">0</span> / <span id="battery-capacity">0</span> MW</div>
+                <div class="resource-bar"><div class="battery-fill" id="battery-bar"></div></div>
+                <div>📈 Dia: <span id="day">1</span> | 🌤️ Clima: <span id="weather">Ensolarado</span></div>
+                <div>🔧 Manutenção: $<span id="maintenance" class="maintenance-cost">0</span>/dia</div>
+            </div>
+        </div>
+        
+        <div id="actions">
+            <button class="action-button" id="sell-energy">Vender Energia ($0)</button>
+            <button class="action-button" id="sell-all">Vender Tudo</button>
+            <button class="action-button" id="save-game">Salvar Jogo</button>
+            <button class="action-button" id="load-game">Carregar Jogo</button>
+        </div>
+        
+        <div id="build-menu">
+            <button class="build-button" data-type="panel">☀️ Painel ($500)</button>
+            <button class="build-button" data-type="battery">🔋 Bateria ($1000)</button>
+            <button class="build-button" data-type="transformer">⚡ Transformador ($2000)</button>
+            <button class="build-button" data-type="wire">🔌 Fio ($100)</button>
+            <button class="build-button" data-type="delete">❌ Vender</button>
+        </div>
+        
+        <div id="tooltip"></div>
+        <div class="save-notification" id="save-notification">Jogo salvo com sucesso!</div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        // Configuração inicial do jogo
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Ajustar tamanho do canvas para a janela
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Variáveis do jogo
+        let gameState = {
+            money: 10000,
+            energy: 0,
+            maxEnergy: 0,
+            storedEnergy: 0,
+            batteryCapacity: 0,
+            day: 1,
+            weather: 'Ensolarado',
+            selectedBuilding: null,
+            objects: [],
+            wires: [],
+            lastPlaced: null,
+            sellMode: false,
+            maintenanceCost: 0,
+            lastSave: null
+        };
+        
+        // Definir tipos de construções
+        const buildingTypes = {
+            panel: {
+                name: "Painel Solar",
+                cost: 500,
+                width: 60,
+                height: 40,
+                color: '#3498db',
+                energyProduction: 20,
+                sellPrice: 300,
+                maintenance: 5 // Custo diário de manutenção
+            },
+            battery: {
+                name: "Bateria",
+                cost: 1000,
+                width: 50,
+                height: 60,
+                color: '#9b59b6',
+                energyStorage: 500,
+                sellPrice: 700,
+                maintenance: 10,
+                storedEnergy: 0 // Energia armazenada individualmente
+            },
+            transformer: {
+                name: "Transformador",
+                cost: 2000,
+                width: 70,
+                height: 70,
+                color: '#e74c3c',
+                energyDistribution: 100,
+                sellPrice: 1500,
+                maintenance: 15
+            },
+            wire: {
+                name: "Fio de Conexão",
+                cost: 100,
+                width: 5,
+                height: 5,
+                color: '#f1c40f',
+                sellPrice: 50,
+                maintenance: 2
+            }
+        };
+        
+        // Sistema de grid
+        const gridSize = 20;
+        
+        // Inicializar o jogo
+        function initGame() {
+            // Tentar carregar jogo salvo
+            if (!loadGame()) {
+                // Se não houver jogo salvo, inicializar com valores padrão
+                gameState.objects.forEach(obj => {
+                    if (!obj.id) obj.id = Date.now() + Math.floor(Math.random() * 1000);
+                    if (obj.type === 'battery' && obj.storedEnergy === undefined) obj.storedEnergy = 0;
+                });
+            }
+            
+            updateUI();
+            initBuildEvents();
+            simulateTime();
+            gameLoop();
+        }
+        
+        // Salvar jogo no localStorage
+        function saveGame() {
+            const saveData = {
+                money: gameState.money,
+                day: gameState.day,
+                weather: gameState.weather,
+                objects: gameState.objects,
+                wires: gameState.wires,
+                storedEnergy: gameState.storedEnergy,
+                batteryCapacity: gameState.batteryCapacity,
+                maintenanceCost: gameState.maintenanceCost,
+                lastSave: new Date().toISOString()
+            };
+            
+            localStorage.setItem('solarPlantSave', JSON.stringify(saveData));
+            
+            // Mostrar notificação
+            const notification = document.getElementById('save-notification');
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Carregar jogo do localStorage
+        function loadGame() {
+            const saveData = localStorage.getItem('solarPlantSave');
+            if (saveData) {
+                try {
+                    const loadedData = JSON.parse(saveData);
+                    
+                    // Atualizar estado do jogo com dados salvos
+                    gameState.money = loadedData.money || 10000;
+                    gameState.day = loadedData.day || 1;
+                    gameState.weather = loadedData.weather || 'Ensolarado';
+                    gameState.objects = loadedData.objects || [];
+                    gameState.wires = loadedData.wires || [];
+                    gameState.storedEnergy = loadedData.storedEnergy || 0;
+                    gameState.batteryCapacity = loadedData.batteryCapacity || 0;
+                    gameState.maintenanceCost = loadedData.maintenanceCost || 0;
+                    gameState.lastSave = loadedData.lastSave || null;
+                    
+                    // Garantir que todas as baterias tenham energia armazenada
+                    gameState.objects.forEach(obj => {
+                        if (obj.type === 'battery' && obj.storedEnergy === undefined) {
+                            obj.storedEnergy = 0;
+                        }
+                    });
+                    
+                    // Recalcular produção de energia
+                    calculateEnergyProduction();
+                    return true;
+                } catch (e) {
+                    console.error('Erro ao carregar jogo:', e);
+                    return false;
+                }
+            }
+            return false;
+        }
+        
+        // Atualizar a interface do usuário
+        function updateUI() {
+            document.getElementById('money').textContent = gameState.money.toLocaleString();
+            document.getElementById('energy').textContent = Math.round(gameState.energy);
+            document.getElementById('max-energy').textContent = gameState.maxEnergy;
+            document.getElementById('stored-energy').textContent = Math.round(gameState.storedEnergy);
+            document.getElementById('battery-capacity').textContent = gameState.batteryCapacity;
+            document.getElementById('day').textContent = gameState.day;
+            document.getElementById('weather').textContent = gameState.weather;
+            document.getElementById('maintenance').textContent = gameState.maintenanceCost;
+            
+            // Atualizar barras de energia
+            const energyPercent = gameState.maxEnergy > 0 ? (gameState.energy / gameState.maxEnergy) * 100 : 0;
+            document.getElementById('energy-bar').style.width = `${energyPercent}%`;
+            
+            const batteryPercent = gameState.batteryCapacity > 0 ? (gameState.storedEnergy / gameState.batteryCapacity) * 100 : 0;
+            document.getElementById('battery-bar').style.width = `${batteryPercent}%`;
+            
+            // Atualizar botão de vender energia
+            document.getElementById('sell-energy').textContent = `Vender Energia ($${Math.round(gameState.storedEnergy * 5)})`;
+            
+            // Atualizar botões de construção
+            document.querySelectorAll('.build-button').forEach(button => {
+                const type = button.getAttribute('data-type');
+                if (type === 'delete') {
+                    button.classList.toggle('selected', gameState.sellMode);
+                } else {
+                    button.classList.toggle('selected', type === gameState.selectedBuilding);
+                }
+            });
+        }
+        
+        // Desenhar grid no canvas
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        // Desenhar objetos no canvas
+        function drawObjects() {
+            // Desenhar fios primeiro (no fundo)
+            gameState.wires.forEach(wire => {
+                ctx.beginPath();
+                ctx.moveTo(wire.fromX + buildingTypes[wire.fromType].width/2, wire.fromY + buildingTypes[wire.fromType].height/2);
+                ctx.lineTo(wire.toX + buildingTypes[wire.toType].width/2, wire.toY + buildingTypes[wire.toType].height/2);
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Adicionar pontos de conexão
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.arc(wire.fromX + buildingTypes[wire.fromType].width/2, wire.fromY + buildingTypes[wire.fromType].height/2, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(wire.toX + buildingTypes[wire.toType].width/2, wire.toY + buildingTypes[wire.toType].height/2, 5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Desenhar objetos de construção
+            gameState.objects.forEach(obj => {
+                const building = buildingTypes[obj.type];
+                
+                // Desenhar sombra
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                
+                // Desenhar objeto
+                ctx.fillStyle = building.color;
+                ctx.fillRect(obj.x, obj.y, building.width, building.height);
+                
+                // Desenhar borda
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(obj.x, obj.y, building.width, building.height);
+                
+                // Remover sombra
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                // Desenhar ícone de venda se no modo venda
+                if (gameState.sellMode) {
+                    ctx.fillStyle = 'rgba(231, 76, 60, 0.7)';
+                    ctx.beginPath();
+                    ctx.moveTo(obj.x, obj.y);
+                    ctx.lineTo(obj.x + building.width, obj.y);
+                    ctx.lineTo(obj.x, obj.y + building.height);
+                    ctx.fill();
+                    
+                    ctx.font = '12px Arial';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(`$${building.sellPrice}`, obj.x + 5, obj.y + 15);
+                }
+                
+                // Desenhar indicador de energia para painéis
+                if (obj.type === 'panel') {
+                    const weatherMultiplier = getWeatherMultiplier();
+                    const production = building.energyProduction * weatherMultiplier;
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(`${production.toFixed(1)}MW`, obj.x + 5, obj.y + building.height - 5);
+                }
+                
+                // Desenhar indicador de capacidade para baterias
+                if (obj.type === 'battery') {
+                    const percentFull = (obj.storedEnergy / building.energyStorage) * 100;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(`${Math.round(obj.storedEnergy)}/${building.energyStorage}MW`, obj.x + 5, obj.y + building.height - 5);
+                    
+                    // Barra de energia interna
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.fillRect(obj.x + 5, obj.y + 5, building.width - 10, 8);
+                    
+                    ctx.fillStyle = '#9b59b6';
+                    ctx.fillRect(obj.x + 5, obj.y + 5, (building.width - 10) * (percentFull / 100), 8);
+                }
+            });
+        }
+        
+        // Verificar se há sobreposição entre objetos
+        function isOverlapping(x, y, width, height, ignoreId = null) {
+            return gameState.objects.some(obj => {
+                if (ignoreId !== null && obj.id === ignoreId) return false;
+                return x < obj.x + buildingTypes[obj.type].width &&
+                       x + width > obj.x &&
+                       y < obj.y + buildingTypes[obj.type].height &&
+                       y + height > obj.y;
+            });
+        }
+        
+        // Encontrar objeto em uma posição
+        function findObjectAt(x, y) {
+            for (let i = 0; i < gameState.objects.length; i++) {
+                const obj = gameState.objects[i];
+                const building = buildingTypes[obj.type];
+                if (x >= obj.x && x <= obj.x + building.width &&
+                    y >= obj.y && y <= obj.y + building.height) {
+                    return obj;
+                }
+            }
+            return null;
+        }
+        
+        // Obter multiplicador climático
+        function getWeatherMultiplier() {
+            switch (gameState.weather) {
+                case 'Ensolarado': return 1;
+                case 'Nublado': return 0.5;
+                case 'Chuvoso': return 0.1;
+                default: return 1;
+            }
+        }
+        
+        // Calcular custo de manutenção
+        function calculateMaintenance() {
+            let totalMaintenance = 0;
+            
+            gameState.objects.forEach(obj => {
+                totalMaintenance += buildingTypes[obj.type].maintenance || 0;
+            });
+            
+            gameState.maintenanceCost = totalMaintenance;
+            return totalMaintenance;
+        }
+        
+        // Cobrar custos de manutenção
+        function chargeMaintenance() {
+            const maintenanceCost = calculateMaintenance();
+            gameState.money -= maintenanceCost;
+            
+            if (gameState.money < 0) {
+                gameState.money = 0;
+                alert(`Atenção! Você não tem dinheiro suficiente para pagar a manutenção de $${maintenanceCost}. Venda alguns itens ou produza mais energia.`);
+            }
+        }
+        
+        // Calcular produção de energia
+        function calculateEnergyProduction() {
+            let totalEnergy = 0;
+            let totalMaxEnergy = 0;
+            let totalBatteryCapacity = 0;
+            
+            // Calcular energia produzida
+            gameState.objects.forEach(obj => {
+                if (obj.type === 'panel') {
+                    // Verificar se o painel está conectado a um transformador
+                    const isConnected = gameState.wires.some(wire => 
+                        (wire.fromId === obj.id && wire.fromType === 'panel') ||
+                        (wire.toId === obj.id && wire.toType === 'panel')
+                    );
+                    
+                    if (isConnected) {
+                        const weatherMultiplier = getWeatherMultiplier();
+                        totalEnergy += buildingTypes.panel.energyProduction * weatherMultiplier;
+                    }
+                    totalMaxEnergy += buildingTypes.panel.energyProduction;
+                }
+                
+                if (obj.type === 'battery') {
+                    totalBatteryCapacity += buildingTypes.battery.energyStorage;
+                    // A energia armazenada é mantida entre os dias (não zera mais)
+                }
+            });
+            
+            gameState.energy = totalEnergy;
+            gameState.maxEnergy = totalMaxEnergy;
+            gameState.batteryCapacity = totalBatteryCapacity;
+            
+            // Distribuir energia para baterias
+            distributeEnergy();
+        }
+        
+        // Distribuir energia para baterias
+        function distributeEnergy() {
+            let remainingEnergy = gameState.energy;
+            
+            // Encontrar todas as baterias conectadas
+            const connectedBatteries = gameState.objects.filter(obj => 
+                obj.type === 'battery' && 
+                gameState.wires.some(wire => 
+                    (wire.fromId === obj.id && wire.fromType === 'battery') ||
+                    (wire.toId === obj.id && wire.toType === 'battery')
+                )
+            );
+            
+            // Distribuir energia para baterias conectadas
+            if (connectedBatteries.length > 0 && remainingEnergy > 0) {
+                const energyPerBattery = remainingEnergy / connectedBatteries.length;
+                
+                connectedBatteries.forEach(battery => {
+                    const batteryCapacity = buildingTypes.battery.energyStorage;
+                    const availableSpace = batteryCapacity - (battery.storedEnergy || 0);
+                    const energyToAdd = Math.min(energyPerBattery, availableSpace);
+                    
+                    battery.storedEnergy = (battery.storedEnergy || 0) + energyToAdd;
+                    remainingEnergy -= energyToAdd;
+                });
+                
+                // Se ainda sobrar energia, distribuir o excedente
+                if (remainingEnergy > 0) {
+                    const batteriesWithSpace = connectedBatteries.filter(b => {
+                        const currentEnergy = b.storedEnergy || 0;
+                        return currentEnergy < buildingTypes.battery.energyStorage;
+                    });
+                    
+                    if (batteriesWithSpace.length > 0) {
+                        const extraEnergyPerBattery = remainingEnergy / batteriesWithSpace.length;
+                        
+                        batteriesWithSpace.forEach(battery => {
+                            const batteryCapacity = buildingTypes.battery.energyStorage;
+                            const availableSpace = batteryCapacity - (battery.storedEnergy || 0);
+                            const energyToAdd = Math.min(extraEnergyPerBattery, availableSpace);
+                            
+                            battery.storedEnergy += energyToAdd;
+                            remainingEnergy -= energyToAdd;
+                        });
+                    }
+                }
+            }
+            
+            // Atualizar energia armazenada total
+            let totalStored = 0;
+            gameState.objects.forEach(obj => {
+                if (obj.type === 'battery') {
+                    totalStored += obj.storedEnergy || 0;
+                }
+            });
+            gameState.storedEnergy = totalStored;
+        }
+        
+        // Vender um objeto
+        function sellObject(obj) {
+            // Encontrar e remover todos os fios conectados a este objeto
+            gameState.wires = gameState.wires.filter(wire => 
+                wire.fromId !== obj.id && wire.toId !== obj.id
+            );
+            
+            // Adicionar dinheiro pelo valor de venda
+            gameState.money += buildingTypes[obj.type].sellPrice;
+            
+            // Se for uma bateria, perder a energia armazenada
+            if (obj.type === 'battery') {
+                gameState.storedEnergy -= obj.storedEnergy || 0;
+            }
+            
+            // Remover o objeto
+            gameState.objects = gameState.objects.filter(o => o.id !== obj.id);
+            
+            // Recalcular manutenção e energia
+            calculateMaintenance();
+            calculateEnergyProduction();
+        }
+        
+        // Vender toda a energia armazenada
+        function sellEnergy() {
+            if (gameState.storedEnergy > 0) {
+                const earnings = gameState.storedEnergy * 5;
+                gameState.money += earnings;
+                
+                // Zerar energia armazenada em todas as baterias
+                gameState.objects.forEach(obj => {
+                    if (obj.type === 'battery') {
+                        obj.storedEnergy = 0;
+                    }
+                });
+                
+                gameState.storedEnergy = 0;
+                
+                // Feedback visual
+                alert(`Energia vendida! Você ganhou $${Math.round(earnings)}`);
+            } else {
+                alert('Não há energia armazenada para vender!');
+            }
+        }
+        
+        // Vender todos os itens
+        function sellAllItems() {
+            if (gameState.objects.length === 0) {
+                alert('Não há itens para vender!');
+                return;
+            }
+            
+            if (confirm('Tem certeza que deseja vender todos os itens?')) {
+                let totalEarnings = 0;
+                
+                // Calcular valor total
+                gameState.objects.forEach(obj => {
+                    totalEarnings += buildingTypes[obj.type].sellPrice;
+                });
+                
+                // Limpar objetos e fios
+                gameState.objects = [];
+                gameState.wires = [];
+                gameState.storedEnergy = 0;
+                
+                // Adicionar dinheiro
+                gameState.money += totalEarnings;
+                
+                // Recalcular manutenção e energia
+                calculateMaintenance();
+                calculateEnergyProduction();
+                
+                alert(`Todos os itens vendidos! Você ganhou $${totalEarnings}`);
+            }
+        }
+        
+        // Loop principal do jogo
+        function gameLoop() {
+            // Limpar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Desenhar grid
+            drawGrid();
+            
+            // Desenhar objetos
+            drawObjects();
+            
+            // Atualizar UI
+            updateUI();
+            
+            // Chamar próximo frame
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Inicializar eventos de construção
+        function initBuildEvents() {
+            const buildButtons = document.querySelectorAll('.build-button');
+            
+            buildButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const type = button.getAttribute('data-type');
+                    
+                    if (type === 'delete') {
+                        // Modo venda
+                        gameState.sellMode = !gameState.sellMode;
+                        gameState.selectedBuilding = null;
+                    } else if (gameState.money >= buildingTypes[type].cost) {
+                        gameState.selectedBuilding = type;
+                        gameState.sellMode = false;
+                    } else {
+                        alert('Dinheiro insuficiente!');
+                    }
+                });
+            });
+            
+            // Evento de clique no canvas para colocar construções
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Alinhar ao grid
+                const gridX = Math.floor(x / gridSize) * gridSize;
+                const gridY = Math.floor(y / gridSize) * gridSize;
+                
+                if (gameState.sellMode) {
+                    // Modo venda - vender objeto clicado
+                    const obj = findObjectAt(x, y);
+                    if (obj) {
+                        sellObject(obj);
+                    }
+                } else if (gameState.selectedBuilding) {
+                    const building = buildingTypes[gameState.selectedBuilding];
+                    
+                    if (gameState.selectedBuilding === 'wire') {
+                        // Lógica especial para fios
+                        const obj = findObjectAt(x, y);
+                        if (obj) {
+                            if (gameState.lastPlaced) {
+                                // Conectar o último objeto clicado com este
+                                const wire = {
+                                    fromId: gameState.lastPlaced.id,
+                                    fromType: gameState.lastPlaced.type,
+                                    fromX: gameState.lastPlaced.x,
+                                    fromY: gameState.lastPlaced.y,
+                                    toId: obj.id,
+                                    toType: obj.type,
+                                    toX: obj.x,
+                                    toY: obj.y
+                                };
+                                
+                                // Verificar se a conexão já existe
+                                const connectionExists = gameState.wires.some(w => 
+                                    (w.fromId === wire.fromId && w.toId === wire.toId) ||
+                                    (w.fromId === wire.toId && w.toId === wire.fromId)
+                                );
+                                
+                                if (!connectionExists) {
+                                    gameState.wires.push(wire);
+                                    gameState.money -= building.cost;
+                                    gameState.lastPlaced = null;
+                                    
+                                    // Recalcular energia
+                                    calculateEnergyProduction();
+                                } else {
+                                    alert('Essa conexão já existe!');
+                                }
+                            } else {
+                                // Primeiro objeto selecionado para conexão
+                                gameState.lastPlaced = obj;
+                                alert('Agora clique em outro objeto para conectar com um fio.');
+                            }
+                        }
+                    } else {
+                        // Verificar se há espaço disponível
+                        const canBuild = !isOverlapping(gridX, gridY, building.width, building.height);
+                        
+                        if (canBuild) {
+                            // Criar objeto com ID único
+                            const newObj = {
+                                id: Date.now(), // ID único baseado no timestamp
+                                type: gameState.selectedBuilding,
+                                x: gridX,
+                                y: gridY
+                            };
+                            
+                            // Inicializar energia armazenada para baterias
+                            if (newObj.type === 'battery') {
+                                newObj.storedEnergy = 0;
+                            }
+                            
+                            gameState.objects.push(newObj);
+                            
+                            // Deduzir custo
+                            gameState.money -= building.cost;
+                            
+                            // Recalcular manutenção e energia
+                            calculateMaintenance();
+                            calculateEnergyProduction();
+                        } else {
+                            alert('Não há espaço suficiente para construir aqui!');
+                        }
+                    }
+                }
+            });
+            
+            // Evento para vender energia
+            document.getElementById('sell-energy').addEventListener('click', sellEnergy);
+            
+            // Evento para vender todos os itens
+            document.getElementById('sell-all').addEventListener('click', sellAllItems);
+            
+            // Evento para salvar o jogo
+            document.getElementById('save-game').addEventListener('click', saveGame);
+            
+            // Evento para carregar o jogo
+            document.getElementById('load-game').addEventListener('click', () => {
+                if (confirm('Isso irá substituir seu jogo atual. Deseja continuar?')) {
+                    loadGame();
+                    alert('Jogo carregado com sucesso!');
+                }
+            });
+            
+            // Tooltip para objetos
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const tooltip = document.getElementById('tooltip');
+                const obj = findObjectAt(x, y);
+                
+                if (obj) {
+                    const building = buildingTypes[obj.type];
+                    let tooltipText = building.name;
+                    
+                    if (obj.type === 'panel') {
+                        const weatherMultiplier = getWeatherMultiplier();
+                        const production = building.energyProduction * weatherMultiplier;
+                        tooltipText += ` | Produção: ${production.toFixed(1)}MW`;
+                        tooltipText += ` | Manutenção: $${building.maintenance}/dia`;
+                    } else if (obj.type === 'battery') {
+                        tooltipText += ` | Armazenamento: ${Math.round(obj.storedEnergy || 0)}/${building.energyStorage}MW`;
+                        tooltipText += ` | Manutenção: $${building.maintenance}/dia`;
+                    } else if (obj.type === 'transformer') {
+                        tooltipText += ` | Distribuição: ${building.energyDistribution}MW`;
+                        tooltipText += ` | Manutenção: $${building.maintenance}/dia`;
+                    } else if (obj.type === 'wire') {
+                        tooltipText += ` | Manutenção: $${building.maintenance}/dia`;
+                    }
+                    
+                    if (gameState.sellMode) {
+                        tooltipText += ` | Vender: $${building.sellPrice}`;
+                    }
+                    
+                    tooltip.textContent = tooltipText;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
+        }
+        
+        // Simular passagem de tempo e mudanças de clima
+        function simulateTime() {
+            setInterval(() => {
+                gameState.day++;
+                
+                // Alterar clima aleatoriamente
+                const weatherOptions = ['Ensolarado', 'Nublado', 'Chuvoso'];
+                gameState.weather = weatherOptions[Math.floor(Math.random() * weatherOptions.length)];
+                
+                // Cobrar custos de manutenção
+                chargeMaintenance();
+                
+                // Calcular produção de energia com novo clima
+                calculateEnergyProduction();
+                
+                // Salvar automaticamente a cada 5 dias
+                if (gameState.day % 5 === 0) {
+                    saveGame();
+                }
+                
+            }, 30000); // A cada 30 segundos (ajustável)
+        }
+        
+        // Iniciar quando a janela carregar
+        window.addEventListener('load', initGame);
+        
+        // Redimensionar canvas quando a janela for redimensionada
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Salvar automaticamente quando a página for fechada
+        window.addEventListener('beforeunload', () => {
+            saveGame();
+        });
+    </script>
 </body>
 </html>
